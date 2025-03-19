@@ -1,14 +1,298 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.2/p5.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.2/addons/p5.sound.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="style.css">
-    <meta charset="utf-8" />
-  </head>
-  <body>
-    <main>
-    </main>
-    <script src="sketch.js"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minecraft EDU Worlds</title>
+  <style>
+    @font-face {
+      font-family: 'Minecraft';
+      src: url('Font.ttf') format('truetype');
+    }
+
+    #loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      z-index: 9999;
+    }
+
+    body {
+      font-family: 'Minecraft', sans-serif;
+      background-image: url('https://i.pinimg.com/originals/9d/5c/8f/9d5c8f57521051496d4eaa01665f8601.jpg');
+      background-size: cover;
+      color: white;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      margin-top: 20px;
+      font-size: 40px;
+    }
+
+    #filter-section {
+      margin: 20px;
+    }
+
+    select {
+      font-family: 'Minecraft', sans-serif;
+      font-size: 16px;
+      padding: 5px;
+      border: 2px solid black;
+      border-radius: 5px;
+    }
+
+    #server-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .server {
+      text-align: left;
+      background-color: #222222;
+      padding: 15px;
+      border-radius: 10px;
+      width: 90%;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+      color: white;
+    }
+
+    .server:hover {
+      background-color: #444444;
+    }
+
+    .server h2 {
+      font-size: 24px;
+      margin: 5px 0;
+      color: #FFD700;
+    }
+
+    .server p {
+      font-size: 16px;
+      color: #ccc;
+      margin: 4px 0;
+    }
+
+    #upload-button {
+      margin: 20px;
+    }
+
+    button {
+      font-family: 'Minecraft', sans-serif;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #FFD700;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #FFC107;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Minecraft EDU Worlds</h1>
+
+  <!-- Filter Section -->
+  <div id="filter-section">
+    <label for="filter">Filter by Domain:</label>
+    <select id="filter" onchange="loadServers(this.value)">
+      <option value="">All</option>
+    </select>
+  </div>
+
+  <!-- Upload Button -->
+  <div id="upload-button">
+    <button
+      onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLScKos1SzSf2gI-RtuLbucibUfS-4hmAJjnC5sf6l5AvvK9Wow/viewform', '_blank')">
+      Upload New Server
+    </button>
+  </div>
+
+  <div id="loading" style="display: none;">
+    <h2>Loading servers...</h2>
+  </div>
+
+  <div id="server-list"></div>
+
+  <script>
+    const apiUrl = 'https://script.google.com/macros/s/AKfycbyc5hROsBp5WxbPqk-BcQuS1MklOzUxpL1ObwaGO0wbyKLgTrWzxsv4CUpRkF55EjhDaQ/exec';
+
+    // Load servers for a specific domain or all servers
+    async function loadServers(domain = '') {
+      const loading = document.getElementById('loading');
+      const serverList = document.getElementById('server-list');
+
+      loading.style.display = 'flex';
+
+      try {
+        const response = await fetch(`${apiUrl}?action=readByEmail&query=${encodeURIComponent(domain)}`);
+        const text = await response.text();
+        const servers = JSON.parse(text);
+
+        const uniqueDomains = Array.from(new Set(servers.map(server => server[1].split('@')[1])));
+
+        // Populate filter dropdown
+        const filterDropdown = document.getElementById('filter');
+        filterDropdown.innerHTML = '<option value="">All</option>';
+        uniqueDomains.forEach(domain => {
+          const option = document.createElement('option');
+          option.value = domain;
+          option.textContent = domain;
+          filterDropdown.appendChild(option);
+        });
+
+        // Process servers
+        servers.forEach(server => {
+          try {
+            // Parse the event log at index 4
+            const eventLog = JSON.parse(server[4] || '[]');
+            const joins = eventLog.filter(event => event[1] === 'World Joined').length;
+            const leaves = eventLog.filter(event => event[1] === 'World Left').length;
+
+            // Calculate players
+            server.players = joins - leaves; // Adds a players property dynamically
+            server.lastJoin = joins > 0 ? eventLog[eventLog.length - 1][0] : null; // Most recent join event
+          } catch (error) {
+            console.warn(`Error processing events for server: ${server[2]}`, error);
+            server.players = 0; // Default to zero players if something goes wrong
+            server.lastJoin = null;
+          }
+        });
+
+        // Sort servers by players count
+        servers.sort((a, b) => b.players - a.players);
+
+        serverList.innerHTML = '';
+
+        servers.forEach(server => {
+          if (domain === '' || server[1].split('@')[1] === domain) {
+            const lastClick = server.lastJoin
+              ? new Date(server.lastJoin).toLocaleString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+              })
+              : 'N/A';
+
+            const serverDiv = document.createElement('div');
+            serverDiv.className = 'server';
+            serverDiv.innerHTML = `
+                      <h2>${server[2]}</h2>
+                      <p><strong>Uploader:</strong> ${server[1]}</p>
+                      <p><strong>Created:</strong> ${server[0]}</p>
+                      <p><strong>Last Joined:</strong> ${lastClick}</p>
+                      <p><strong>Players:</strong> ${server.players}</p>
+                    `;
+            serverDiv.onclick = () => handleServerJoin(server[3]);
+            serverList.appendChild(serverDiv);
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        loading.style.display = 'none';
+      }
+    }
+
+    // Handle "World Joined" event
+    function handleServerJoin(serverUrl) {
+      const activeServerUrl = getCookie('activeServer');
+      console.log(activeServerUrl);
+      if (activeServerUrl) {
+        logEvent(activeServerUrl, 'World Left');
+        deleteCookie('activeServer'); // Clear the stored active server
+      }
+      logEvent(serverUrl, 'World Joined');
+      setCookie('activeServer', serverUrl, 7); // Track active server
+      window.open(serverUrl);
+
+      loadServers();
+    }
+
+    // Log an event
+    async function logEvent(serverUrl, event) {
+      try {
+        await fetch(
+          `${apiUrl}?action=logEvent&query=${encodeURIComponent(serverUrl)}&event=${encodeURIComponent(event)}`
+        );
+        console.log(`Event logged: ${event} for ${serverUrl}`);
+      } catch (error) {
+        console.error('Error logging event:', error);
+      }
+    }
+
+    // Handle "World Left" event on page revisit
+    document.addEventListener('DOMContentLoaded', () => {
+      const activeServerUrl = getCookie('activeServer');
+      console.log(activeServerUrl);
+      if (activeServerUrl) {
+        logEvent(activeServerUrl, 'World Left');
+        deleteCookie('activeServer'); // Clear the stored active server
+      }
+
+      loadServers(); // Load servers after handling "World Left"
+    });
+
+    // Function to set a cookie
+    function setCookie(name, value, days) {
+      const date = new Date();
+      date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000)); // Set expiration
+      const expires = "expires=" + date.toUTCString();
+      document.cookie = `${name}=${value}; ${expires}; path=/; SameSite=None; Secure`;
+    }
+
+    // Function to get a cookie by name
+    function getCookie(name) {
+      const cookieArr = document.cookie.split(';');
+      for (let cookie of cookieArr) {
+        cookie = cookie.trim();
+        if (cookie.indexOf(name + "=") === 0) {
+          return cookie.substring(name.length + 1);
+        }
+      }
+      return null;
+    }
+
+    // Function to delete a cookie
+    function deleteCookie(name) {
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/`;
+    }
+
+    // Log an event
+    async function logEvent(serverUrl, event) {
+      try {
+        await fetch(
+          `${apiUrl}?action=logEvent&query=${encodeURIComponent(serverUrl)}&event=${encodeURIComponent(event)}`
+        );
+        console.log(`Event logged: ${event} for ${serverUrl}`);
+      } catch (error) {
+        console.error('Error logging event:', error);
+      }
+    }
+  </script>
+</body>
+
 </html>
