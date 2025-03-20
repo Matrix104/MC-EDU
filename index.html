@@ -28,8 +28,7 @@
 
     body {
       font-family: 'Minecraft', sans-serif;
-      background-image: url('https://i.pinimg.com/originals/9d/5c/8f/9d5c8f57521051496d4eaa01665f8601.jpg');
-      background-size: cover;
+      background-color: #000000;
       color: white;
       text-align: center;
       margin: 0;
@@ -79,7 +78,7 @@
     .server h2 {
       font-size: 24px;
       margin: 5px 0;
-      color: #FFD700;
+      color: #800080;
     }
 
     .server p {
@@ -96,20 +95,20 @@
       font-family: 'Minecraft', sans-serif;
       padding: 10px 20px;
       font-size: 16px;
-      background-color: #FFD700;
+      background-color: #800080;
       border: none;
       border-radius: 5px;
       cursor: pointer;
     }
 
     button:hover {
-      background-color: #FFC107;
+      background-color: #800080;
     }
   </style>
 </head>
 
 <body>
-  <h1>Minecraft EDU Worlds</h1>
+  <h1>Minecraft EDU Servers</h1>
 
   <!-- Filter Section -->
   <div id="filter-section">
@@ -137,7 +136,7 @@
     const apiUrl = 'https://script.google.com/macros/s/AKfycbyc5hROsBp5WxbPqk-BcQuS1MklOzUxpL1ObwaGO0wbyKLgTrWzxsv4CUpRkF55EjhDaQ/exec';
 
     // Load servers for a specific domain or all servers
-    async function loadServers(domain = '') {
+    async function loadServers(domain = '', start = false) {
       const loading = document.getElementById('loading');
       const serverList = document.getElementById('server-list');
 
@@ -151,14 +150,16 @@
         const uniqueDomains = Array.from(new Set(servers.map(server => server[1].split('@')[1])));
 
         // Populate filter dropdown
-        const filterDropdown = document.getElementById('filter');
-        filterDropdown.innerHTML = '<option value="">All</option>';
-        uniqueDomains.forEach(domain => {
-          const option = document.createElement('option');
-          option.value = domain;
-          option.textContent = domain;
-          filterDropdown.appendChild(option);
-        });
+        if (start) {
+          const filterDropdown = document.getElementById('filter');
+          filterDropdown.innerHTML = '<option value="">All</option>';
+          uniqueDomains.forEach(domain => {
+            const option = document.createElement('option');
+            option.value = domain;
+            option.textContent = domain;
+            filterDropdown.appendChild(option);
+          });
+        }
 
         // Process servers
         servers.forEach(server => {
@@ -184,31 +185,29 @@
         serverList.innerHTML = '';
 
         servers.forEach(server => {
-          if (domain === '' || server[1].split('@')[1] === domain) {
-            const lastClick = server.lastJoin
-              ? new Date(server.lastJoin).toLocaleString('en-US', {
-                weekday: 'short',
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true,
-              })
-              : 'N/A';
+          const lastClick = server.lastJoin
+            ? new Date(server.lastJoin).toLocaleString('en-US', {
+              weekday: 'short',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+            })
+            : 'N/A';
 
-            const serverDiv = document.createElement('div');
-            serverDiv.className = 'server';
-            serverDiv.innerHTML = `
+          const serverDiv = document.createElement('div');
+          serverDiv.className = 'server';
+          serverDiv.innerHTML = `
                       <h2>${server[2]}</h2>
                       <p><strong>Uploader:</strong> ${server[1]}</p>
                       <p><strong>Created:</strong> ${server[0]}</p>
                       <p><strong>Last Joined:</strong> ${lastClick}</p>
                       <p><strong>Players:</strong> ${server.players}</p>
                     `;
-            serverDiv.onclick = () => handleServerJoin(server[3]);
-            serverList.appendChild(serverDiv);
-          }
+          serverDiv.onclick = () => handleServerJoin(server[3]);
+          serverList.appendChild(serverDiv);
         });
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -253,7 +252,7 @@
         deleteCookie('activeServer'); // Clear the stored active server
       }
 
-      loadServers(); // Load servers after handling "World Left"
+      loadServers('', true); // Load servers after handling "World Left"
     });
 
     // Function to set a cookie
