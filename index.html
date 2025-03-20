@@ -26,6 +26,17 @@
       z-index: 9999;
     }
 
+    .tab-bar {
+      height: 50px;
+      background-color: black;
+      /* Set to black */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+    }
+
     body {
       font-family: 'Minecraft', sans-serif;
       background-color: #000000;
@@ -121,10 +132,10 @@
   <!-- Upload Button -->
   <div id="upload-button">
     <button
-      onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLScKos1SzSf2gI-RtuLbucibUfS-4hmAJjnC5sf6l5AvvK9Wow/viewform', '_blank')">
+      onclick="window.location.href = 'https://docs.google.com/forms/d/e/1FAIpQLScKos1SzSf2gI-RtuLbucibUfS-4hmAJjnC5sf6l5AvvK9Wow/viewform'">
       Upload New Server
     </button>
-  </div>
+  </div>  
 
   <div id="loading" style="display: none;">
     <h2>Loading servers...</h2>
